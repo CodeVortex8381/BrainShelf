@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Notes — BrainShelf</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/#notes">Explore Notes</a>
+            <a href="/my-uploads.html">My Uploads</a>
+            <a href="/#about">About</a>
+        </nav>
+        <div class="nav-actions" id="navbarAuthSlot"></div>
+    </header>
+
+    <main class="auth-wrapper">
+        <div class="auth-card wide">
+            <div class="auth-header">
+                <span class="tag">CONTRIBUTE KNOWLEDGE</span>
+                <h1>Upload Study Notes</h1>
+                <p>Share your academic notes with fellow students. All uploads are reviewed by moderators prior to public publishing.</p>
+            </div>
+
+            <div id="uploadAlert" class="form-alert" role="alert"></div>
+
+            <form id="uploadForm" novalidate enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="noteTitle">Note Title *</label>
+                    <input
+                        type="text"
+                        id="noteTitle"
+                        name="title"
+                        placeholder="e.g. Distributed Systems & Microservices Architecture"
+                        required
+                        minlength="3"
+                        maxlength="150"
+                    >
+                    <small class="field-hint">A clear, descriptive title for students searching this subject.</small>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;">
+                    <div class="form-group">
+                        <label for="noteSubject">Subject / Course Name *</label>
+                        <input
+                            type="text"
+                            id="noteSubject"
+                            name="subject"
+                            placeholder="e.g. Cloud Computing"
+                            required
+                            minlength="2"
+                            maxlength="100"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="noteCategory">Category *</label>
+                        <select id="noteCategory" name="category" required>
+                            <option value="">Select Category</option>
+                            <option value="Programming">Programming</option>
+                            <option value="Database">Database</option>
+                            <option value="AI">Artificial Intelligence (AI)</option>
+                            <option value="Web Development">Web Development</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="noteSemester">Semester *</label>
+                    <select id="noteSemester" name="semester" required>
+                        <option value="">Select Semester</option>
+                        <option value="Semester 1">Semester 1</option>
+                        <option value="Semester 2">Semester 2</option>
+                        <option value="Semester 3">Semester 3</option>
+                        <option value="Semester 4">Semester 4</option>
+                        <option value="Semester 5">Semester 5</option>
+                        <option value="Semester 6">Semester 6</option>
+                        <option value="Semester 7">Semester 7</option>
+                        <option value="Semester 8">Semester 8</option>
+                        <option value="All Semesters">All Semesters / General</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="noteDescription">Description & Summary *</label>
+                    <textarea
+                        id="noteDescription"
+                        name="description"
+                        rows="3"
+                        placeholder="Summarize key topics covered, chapter references, or exam prep focus..."
+                        required
+                        minlength="5"
+                        maxlength="1000"
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="noteTags">Tags (Comma-separated, Optional)</label>
+                    <input
+                        type="text"
+                        id="noteTags"
+                        name="tags"
+                        placeholder="e.g. kubernetes, docker, devops"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="notePdf">PDF Document * (Max 10 MB)</label>
+                    <input
+                        type="file"
+                        id="notePdf"
+                        name="pdf"
+                        accept=".pdf,application/pdf"
+                        required
+                    >
+                    <small class="field-hint">Only genuine PDF documents up to 10 MB are accepted.</small>
+                </div>
+
+                <button type="submit" id="uploadSubmitBtn" class="btn-submit">
+                    Submit Note for Review
+                </button>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <p>Learn together. Grow together.</p>
+        <small>© 2026 BrainShelf · Student Notes Sharing Platform</small>
+    </footer>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        const uploadForm = document.getElementById("uploadForm");
+        const uploadAlert = document.getElementById("uploadAlert");
+        const uploadSubmitBtn = document.getElementById("uploadSubmitBtn");
+
+        // Verify authentication on page load
+        document.addEventListener("DOMContentLoaded", async () => {
+            const user = await checkAuthStatus();
+            if (!user) {
+                showAlert("You must be logged in to upload notes. Redirecting to login...", "error");
+                setTimeout(() => {
+                    window.location.href = "/login.html";
+                }, 1200);
+            }
+        });
+
+        uploadForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            uploadAlert.className = "form-alert";
+            uploadAlert.style.display = "none";
+
+            const title = document.getElementById("noteTitle").value.trim();
+            const subject = document.getElementById("noteSubject").value.trim();
+            const category = document.getElementById("noteCategory").value;
+            const semester = document.getElementById("noteSemester").value;
+            const description = document.getElementById("noteDescription").value.trim();
+            const tags = document.getElementById("noteTags").value.trim();
+            const fileInput = document.getElementById("notePdf");
+            const file = fileInput.files[0];
+
+            if (!title || title.length < 3) {
+                showAlert("Note title must be at least 3 characters long.", "error");
+                return;
+            }
+
+            if (!subject || subject.length < 2) {
+                showAlert("Subject name must be at least 2 characters long.", "error");
+                return;
+            }
+
+            if (!category) {
+                showAlert("Please select a category.", "error");
+                return;
+            }
+
+            if (!semester) {
+                showAlert("Please select a semester.", "error");
+                return;
+            }
+
+            if (!description || description.length < 5) {
+                showAlert("Description must be at least 5 characters long.", "error");
+                return;
+            }
+
+            if (!file) {
+                showAlert("Please select a PDF file to upload.", "error");
+                return;
+            }
+
+            // Client-side extension check
+            if (!file.name.toLowerCase().endsWith(".pdf")) {
+                showAlert("Invalid file type. Only files ending with .pdf are allowed.", "error");
+                return;
+            }
+
+            // Client-side size check (10MB)
+            const maxBytes = 10 * 1024 * 1024;
+            if (file.size > maxBytes) {
+                showAlert("File size exceeds 10 MB. Please compress the PDF before uploading.", "error");
+                return;
+            }
+
+            uploadSubmitBtn.disabled = true;
+            uploadSubmitBtn.textContent = "Uploading & processing...";
+
+            const formData = new FormData();
+            formData.append("title", title);
+            formData.append("subject", subject);
+            formData.append("category", category);
+            formData.append("semester", semester);
+            formData.append("description", description);
+            if (tags) formData.append("tags", tags);
+            formData.append("pdf", file);
+
+            try {
+                const res = await fetch("/api/notes", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Upload failed.");
+                }
+
+                showAlert("Success! Your note has been submitted and is currently pending administrator review.", "success");
+                uploadForm.reset();
+
+                setTimeout(() => {
+                    window.location.href = "/my-uploads.html";
+                }, 1500);
+            } catch (err) {
+                showAlert(err.message, "error");
+                uploadSubmitBtn.disabled = false;
+                uploadSubmitBtn.textContent = "Submit Note for Review";
+            }
+        });
+
+        function showAlert(msg, type) {
+            uploadAlert.textContent = msg;
+            uploadAlert.className = `form-alert ${type}`;
+            uploadAlert.style.display = "block";
+        }
+    </script>
+</body>
+</html>

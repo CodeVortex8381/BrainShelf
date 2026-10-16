@@ -1,0 +1,136 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainShelf — Student Notes Sharing Platform</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+
+        <nav>
+            <a href="#home">Home</a>
+            <a href="#notes">Explore Notes</a>
+            <a href="#about">About</a>
+        </nav>
+
+        <a href="#notes" class="nav-button">Explore Notes</a>
+    </header>
+
+    <main>
+        <section class="hero" id="home">
+            <div class="hero-content">
+                <span class="tag">YOUR LEARNING COMMUNITY</span>
+
+                <h1>Knowledge grows<br>when we <span>share.</span></h1>
+
+                <p>
+                    Discover notes, share study materials, and learn
+                    together with students from your community.
+                </p>
+
+                <form id="searchForm" class="search-box">
+                    <span>⌕</span>
+                    <input
+                        type="search"
+                        id="searchInput"
+                        placeholder="Search notes, subjects..."
+                        aria-label="Search notes"
+                    >
+                    <button type="submit">Search</button>
+                </form>
+
+                <div class="hero-stats">
+                    <div><strong>Study</strong><small>Smarter together</small></div>
+                    <div><strong>Share</strong><small>Knowledge freely</small></div>
+                    <div><strong>Grow</strong><small>Every day</small></div>
+                </div>
+            </div>
+
+            <div class="hero-art">
+                <div class="art-circle"></div>
+                <div class="book book-back">NOTES</div>
+                <div class="book book-front">
+                    <span>✳</span>
+                    <h2>Your next<br>big idea.</h2>
+                    <p>READ · LEARN · SHARE</p>
+                </div>
+                <div class="floating-card">✦ Keep learning!</div>
+            </div>
+        </section>
+
+        <section class="notes-section" id="notes">
+            <div class="section-heading">
+                <div>
+                    <span class="tag">YOUR STUDY SPACE</span>
+                    <h2>Explore study materials</h2>
+                    <p>Find the resources you need to move forward.</p>
+                </div>
+            </div>
+
+            <div class="filter-row">
+                <div class="filters" id="filters">
+                    <button class="filter active" data-category="All">All Notes</button>
+                    <button class="filter" data-category="Programming">Programming</button>
+                    <button class="filter" data-category="Database">Database</button>
+                    <button class="filter" data-category="AI">Artificial Intelligence</button>
+                    <button class="filter" data-category="Web Development">Web Development</button>
+                </div>
+                <div class="filter-extras">
+                    <select id="semesterFilter" class="semester-select" aria-label="Filter notes by semester">
+                        <option value="All">All Semesters</option>
+                        <option value="Semester 1">Semester 1</option>
+                        <option value="Semester 2">Semester 2</option>
+                        <option value="Semester 3">Semester 3</option>
+                        <option value="Semester 4">Semester 4</option>
+                        <option value="Semester 5">Semester 5</option>
+                        <option value="Semester 6">Semester 6</option>
+                        <option value="Semester 7">Semester 7</option>
+                        <option value="Semester 8">Semester 8</option>
+                    </select>
+                    <button id="resetFiltersBtn" class="btn-reset" type="button">Reset Filters</button>
+                </div>
+            </div>
+
+            <div id="notesLoadingState" class="state-container" hidden>
+                <div class="loading-spinner"></div>
+                <p style="color:var(--muted);font-size:13px;">Loading study materials...</p>
+            </div>
+
+            <div id="notesErrorState" class="state-container" hidden>
+                <div class="error-banner">
+                    <p id="notesErrorMessage">Could not load notes at this moment.</p>
+                    <button id="retryNotesBtn" type="button">Retry</button>
+                </div>
+            </div>
+
+            <div class="notes-grid" id="notesGrid"></div>
+            <p class="empty-message" id="emptyMessage" hidden>
+                No matching notes found. Try another search or reset filters.
+            </p>
+        </section>
+
+        <section class="about-section" id="about">
+            <span class="tag">ABOUT BRAINSHELF</span>
+            <h2>One shelf. Endless possibilities.</h2>
+            <p>
+                BrainShelf is a student notes-sharing platform designed
+                to make educational resources easier to discover and share.
+            </p>
+        </section>
+    </main>
+
+    <footer>
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <p>Learn together. Grow together.</p>
+        <small>© 2026 BrainShelf · Student Notes Sharing Platform</small>
+    </footer>
+
+    <script src="/js/auth.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+</html>

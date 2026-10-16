@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Uploads — BrainShelf</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/#notes">Explore Notes</a>
+            <a href="/upload.html">Upload Note</a>
+            <a href="/#about">About</a>
+        </nav>
+        <div class="nav-actions" id="navbarAuthSlot"></div>
+    </header>
+
+    <main class="dashboard-container">
+        <div class="dashboard-header" style="display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:20px;">
+            <div>
+                <span class="tag">STUDENT DASHBOARD</span>
+                <h1>My Uploaded Notes</h1>
+                <p id="studentInfo">Track the status of your study material submissions.</p>
+            </div>
+            <a href="/upload.html" class="nav-button">+ Upload New Note</a>
+        </div>
+
+        <div id="loadingUploads" class="state-container">
+            <div class="loading-spinner"></div>
+            <p style="color:var(--muted);font-size:13px;">Retrieving your submissions...</p>
+        </div>
+
+        <div id="uploadsList"></div>
+
+        <div id="emptyUploadsState" class="state-container" hidden>
+            <p style="font-size:16px;font-weight:700;margin-bottom:8px;">You haven't uploaded any notes yet.</p>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:20px;">Share your study guides, lecture summaries, or exam prep notes with fellow students.</p>
+            <a href="/upload.html" class="nav-button">Upload Your First Note</a>
+        </div>
+    </main>
+
+    <footer>
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <p>Learn together. Grow together.</p>
+        <small>© 2026 BrainShelf · Student Notes Sharing Platform</small>
+    </footer>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", async () => {
+            const user = await checkAuthStatus();
+            if (!user) {
+                window.location.href = "/login.html";
+                return;
+            }
+
+            const studentInfo = document.getElementById("studentInfo");
+            if (studentInfo) {
+                studentInfo.textContent = `Signed in as ${user.name} (${user.email})${user.semester ? ` · ${user.semester}` : ""}${user.college ? ` · ${user.college}` : ""}`;
+            }
+
+            loadMyUploads();
+        });
+
+        async function loadMyUploads() {
+            const loading = document.getElementById("loadingUploads");
+            const list = document.getElementById("uploadsList");
+            const emptyState = document.getElementById("emptyUploadsState");
+
+            try {
+                const res = await fetch("/api/notes/mine");
+                const data = await res.json();
+
+                loading.hidden = true;
+
+                if (!res.ok || !data.success) {
+                    list.innerHTML = `<div class="error-banner"><p>${data.error || "Failed to load uploads."}</p></div>`;
+                    return;
+                }
+
+                if (!data.notes || data.notes.length === 0) {
+                    emptyState.hidden = false;
+                    return;
+                }
+
+                emptyState.hidden = true;
+
+                list.innerHTML = data.notes.map(note => {
+                    let badgeClass = "pending";
+                    let badgeLabel = "Pending Review";
+
+                    if (note.status === "approved") {
+                        badgeClass = "approved";
+                        badgeLabel = "Approved & Live";
+                    } else if (note.status === "rejected") {
+                        badgeClass = "rejected";
+                        badgeLabel = "Rejected";
+                    }
+
+                    const dateStr = new Date(note.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric"
+                    });
+
+                    return `
+                        <div class="queue-card">
+                            <div>
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <span class="status-badge ${badgeClass}">${badgeLabel}</span>
+                                    <span class="tag" style="margin-bottom:0;">${escapeHtml(note.category)}</span>
+                                </div>
+                                <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:800;color:var(--ink);">${escapeHtml(note.title)}</h3>
+                                <p style="color:var(--muted);font-size:13px;margin-top:4px;">${escapeHtml(note.description)}</p>
+
+                                <div class="queue-meta">
+                                    <span>📚 <strong>Subject:</strong> ${escapeHtml(note.subject)}</span>
+                                    <span>🎓 <strong>Semester:</strong> ${escapeHtml(note.semester)}</span>
+                                    <span>📅 <strong>Uploaded:</strong> ${dateStr}</span>
+                                    <span>📄 <strong>File:</strong> ${escapeHtml(note.originalFileName || "document.pdf")} (${(note.fileSizeBytes / (1024 * 1024)).toFixed(2)} MB)</span>
+                                </div>
+
+                                ${note.status === "rejected" && note.rejectionReason ? `
+                                    <div style="margin-top:12px;background:#fef2f2;border-left:3px solid #ef4444;padding:8px 12px;border-radius:4px;font-size:12px;color:#991b1b;">
+                                        <strong>Moderator Feedback:</strong> ${escapeHtml(note.rejectionReason)}
+                                    </div>
+                                ` : ""}
+                            </div>
+
+                            <div class="queue-actions">
+                                ${note.status === "approved" ? `
+                                    <a href="/api/notes/${note._id}/download" class="btn-download-card" download>
+                                        📥 View / Download
+                                    </a>
+                                ` : `
+                                    <span style="font-size:12px;color:var(--muted);font-style:italic;">
+                                        ${note.status === "pending" ? "Pending Approval" : "Not Published"}
+                                    </span>
+                                `}
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } catch (err) {
+                loading.hidden = true;
+                list.innerHTML = `<div class="error-banner"><p>Connection error. Could not retrieve uploads.</p></div>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderation Dashboard — BrainShelf Admin</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/#notes">Explore Notes</a>
+            <a href="/admin.html" style="color:var(--green);font-weight:700;">Admin Dashboard</a>
+        </nav>
+        <div class="nav-actions" id="navbarAuthSlot"></div>
+    </header>
+
+    <main class="dashboard-container" id="adminMain">
+        <!-- Access Denied Banner (Default hidden) -->
+        <div id="accessDeniedBanner" class="error-banner" style="display:none;margin-top:40px;text-align:center;">
+            <h2>Access Denied</h2>
+            <p>You must be signed in with an Administrator account to access the moderation dashboard.</p>
+            <button type="button" id="accessDeniedBtn" style="margin-top:15px;">Sign In as Administrator</button>
+        </div>
+
+        <div id="adminContent">
+            <div class="dashboard-header">
+                <span class="tag">ADMINISTRATOR CONTROL PANEL</span>
+                <h1>Moderation & Catalogue Management</h1>
+                <p>Review student submissions, manage live study materials, and monitor platform health.</p>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="stats-grid">
+                <div class="stat-card highlight">
+                    <span class="stat-label">Pending Review</span>
+                    <strong class="stat-value" id="statPending">-</strong>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Approved & Public</span>
+                    <strong class="stat-value" id="statApproved">-</strong>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Rejected Notes</span>
+                    <strong class="stat-value" id="statRejected">-</strong>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-label">Total Users</span>
+                    <strong class="stat-value" id="statUsers">-</strong>
+                </div>
+            </div>
+
+            <!-- Queue Filter Tabs -->
+            <div class="filter-row" style="margin-bottom:25px;">
+                <div class="filters" id="queueTabs">
+                    <button class="filter active" data-status="pending">Pending Review</button>
+                    <button class="filter" data-status="approved">Approved Catalogue</button>
+                    <button class="filter" data-status="rejected">Rejected Notes</button>
+                </div>
+            </div>
+
+            <div id="loadingAdminQueue" class="state-container">
+                <div class="loading-spinner"></div>
+                <p style="color:var(--muted);font-size:13px;">Loading moderation queue...</p>
+            </div>
+
+            <div id="adminQueueList"></div>
+
+            <div id="emptyAdminState" class="state-container" hidden>
+                <p style="font-size:16px;font-weight:700;">No notes found in this queue.</p>
+                <p style="color:var(--muted);font-size:13px;">Submissions matching the selected filter will appear here.</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Reject Reason Modal -->
+    <div id="rejectModal" class="modal-overlay" hidden>
+        <div class="modal-card">
+            <h3>Reject Submission</h3>
+            <p style="color:var(--muted);font-size:13px;margin-bottom:15px;">
+                Provide an optional reason to help the student understand why this note could not be approved.
+            </p>
+            <div class="form-group">
+                <label for="rejectReasonInput">Reason for Rejection</label>
+                <textarea
+                    id="rejectReasonInput"
+                    rows="3"
+                    placeholder="e.g. Incomplete notes, blurry scan, copyright violation, or duplicate topic..."
+                ></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-outline" id="cancelRejectBtn">Cancel</button>
+                <button type="button" class="btn-reject" id="confirmRejectBtn">Confirm Rejection</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <p>Learn together. Grow together.</p>
+        <small>© 2026 BrainShelf · Student Notes Sharing Platform</small>
+    </footer>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        let currentStatusFilter = "pending";
+        let targetNoteIdToReject = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            const user = await checkAuthStatus();
+            if (!user || user.role !== "admin") {
+                document.getElementById("adminContent").style.display = "none";
+                document.getElementById("accessDeniedBanner").style.display = "block";
+                const accessDeniedBtn = document.getElementById("accessDeniedBtn");
+                if (accessDeniedBtn) {
+                    accessDeniedBtn.addEventListener("click", () => {
+                        window.location.href = "/login.html";
+                    });
+                }
+                return;
+            }
+
+            loadStats();
+            loadAdminNotes();
+
+            // Setup tab listeners
+            const queueTabs = document.getElementById("queueTabs");
+            queueTabs.addEventListener("click", (e) => {
+                const btn = e.target.closest("button[data-status]");
+                if (!btn) return;
+                currentStatusFilter = btn.dataset.status;
+                queueTabs.querySelectorAll(".filter").forEach(f => f.classList.toggle("active", f === btn));
+                loadAdminNotes();
+            });
+
+            // Delegate actions on queue cards (Approve, Reject, Delete)
+            const list = document.getElementById("adminQueueList");
+            list.addEventListener("click", (e) => {
+                const btn = e.target.closest("button[data-action]");
+                if (!btn) return;
+
+                const action = btn.dataset.action;
+                const noteId = btn.dataset.id;
+
+                if (action === "approve") {
+                    submitReview(noteId, "approve");
+                } else if (action === "reject") {
+                    openRejectModal(noteId);
+                } else if (action === "delete") {
+                    confirmDelete(noteId);
+                }
+            });
+
+            // Reject modal controls
+            document.getElementById("cancelRejectBtn").addEventListener("click", () => {
+                document.getElementById("rejectModal").hidden = true;
+                targetNoteIdToReject = null;
+            });
+
+            document.getElementById("confirmRejectBtn").addEventListener("click", () => {
+                const reason = document.getElementById("rejectReasonInput").value.trim();
+                if (targetNoteIdToReject) {
+                    submitReview(targetNoteIdToReject, "reject", reason);
+                }
+                document.getElementById("rejectModal").hidden = true;
+            });
+        });
+
+        async function loadStats() {
+            try {
+                const res = await fetch("/api/admin/stats");
+                const data = await res.json();
+                if (data.success && data.stats) {
+                    document.getElementById("statPending").textContent = data.stats.pendingNotes ?? 0;
+                    document.getElementById("statApproved").textContent = data.stats.approvedNotes ?? 0;
+                    document.getElementById("statRejected").textContent = data.stats.rejectedNotes ?? 0;
+                    document.getElementById("statUsers").textContent = data.stats.totalUsers ?? 0;
+                }
+            } catch (err) {
+                console.error("Failed to load admin stats:", err);
+            }
+        }
+
+        async function loadAdminNotes() {
+            const loading = document.getElementById("loadingAdminQueue");
+            const list = document.getElementById("adminQueueList");
+            const empty = document.getElementById("emptyAdminState");
+
+            loading.hidden = false;
+            empty.hidden = true;
+            list.innerHTML = "";
+
+            try {
+                const res = await fetch(`/api/admin/notes?status=${currentStatusFilter}`);
+                const data = await res.json();
+
+                loading.hidden = true;
+
+                if (!res.ok || !data.success) {
+                    list.innerHTML = `<div class="error-banner"><p>${data.error || "Failed to load queue."}</p></div>`;
+                    return;
+                }
+
+                if (!data.notes || data.notes.length === 0) {
+                    empty.hidden = false;
+                    return;
+                }
+
+                empty.hidden = true;
+
+                list.innerHTML = data.notes.map(note => {
+                    const uploaderName = note.uploader ? note.uploader.name : "Unknown Student";
+                    const uploaderEmail = note.uploader ? note.uploader.email : "N/A";
+                    const uploaderCollege = note.uploader && note.uploader.college ? ` (${note.uploader.college})` : "";
+                    const dateStr = new Date(note.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric"
+                    });
+                    const sizeMb = (note.fileSizeBytes / (1024 * 1024)).toFixed(2);
+
+                    return `
+                        <div class="queue-card" id="card-${note._id}">
+                            <div>
+                                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <span class="status-badge ${note.status}">${note.status}</span>
+                                    <span class="tag" style="margin-bottom:0;">${escapeHtml(note.category)}</span>
+                                    <small style="color:var(--muted);">${escapeHtml(note.semester)}</small>
+                                </div>
+                                <h3 style="font-family:'Manrope',sans-serif;font-size:18px;font-weight:800;color:var(--ink);">${escapeHtml(note.title)}</h3>
+                                <p style="color:var(--muted);font-size:13px;margin-top:4px;">${escapeHtml(note.description)}</p>
+
+                                <div class="queue-meta">
+                                    <span>👤 <strong>Student:</strong> ${escapeHtml(uploaderName)} &lt;${escapeHtml(uploaderEmail)}&gt;${escapeHtml(uploaderCollege)}</span>
+                                    <span>📚 <strong>Subject:</strong> ${escapeHtml(note.subject)}</span>
+                                    <span>📅 <strong>Submitted:</strong> ${dateStr}</span>
+                                    <span>📄 <strong>File:</strong> ${escapeHtml(note.originalFileName || "doc.pdf")} (${sizeMb} MB)</span>
+                                </div>
+
+                                ${note.status === "rejected" && note.rejectionReason ? `
+                                    <div style="margin-top:10px;background:#fef2f2;border-left:3px solid #ef4444;padding:6px 12px;font-size:12px;color:#991b1b;">
+                                        <strong>Rejection Reason:</strong> ${escapeHtml(note.rejectionReason)}
+                                    </div>
+                                ` : ""}
+                            </div>
+
+                            <div class="queue-actions">
+                                <a href="/api/notes/${note._id}/download" target="_blank" class="btn-outline" style="text-decoration:none;">
+                                    🔍 Inspect PDF
+                                </a>
+
+                                ${note.status !== "approved" ? `
+                                    <button type="button" class="btn-approve" data-action="approve" data-id="${note._id}">
+                                        ✓ Approve
+                                    </button>
+                                ` : ""}
+
+                                ${note.status !== "rejected" ? `
+                                    <button type="button" class="btn-reject" data-action="reject" data-id="${note._id}">
+                                        ✕ Reject
+                                    </button>
+                                ` : ""}
+
+                                <button type="button" class="btn-delete-item" data-action="delete" data-id="${note._id}" title="Delete note permanently">
+                                    🗑️
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } catch (err) {
+                loading.hidden = true;
+                list.innerHTML = `<div class="error-banner"><p>Connection error loading admin queue.</p></div>`;
+            }
+        }
+
+        function openRejectModal(noteId) {
+            targetNoteIdToReject = noteId;
+            document.getElementById("rejectReasonInput").value = "";
+            document.getElementById("rejectModal").hidden = false;
+        }
+
+        async function submitReview(noteId, action, rejectionReason = "") {
+            try {
+                const res = await fetch(`/api/admin/notes/${noteId}/review`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action, rejectionReason })
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    alert(data.error || "Review submission failed.");
+                    return;
+                }
+
+                loadStats();
+                loadAdminNotes();
+            } catch (err) {
+                alert("Error connecting to server.");
+            }
+        }
+
+        async function confirmDelete(noteId) {
+            if (!confirm("Are you sure you want to permanently delete this note and its file?")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/notes/${noteId}`, {
+                    method: "DELETE"
+                });
+
+                const data = await res.json();
+                if (!res.ok || !data.success) {
+                    alert(data.error || "Delete failed.");
+                    return;
+                }
+
+                loadStats();
+                loadAdminNotes();
+            } catch (err) {
+                alert("Error connecting to server.");
+            }
+        }
+    </script>
+</body>
+</html>

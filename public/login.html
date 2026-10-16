@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In — BrainShelf</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+    <header class="navbar">
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/#notes">Explore Notes</a>
+            <a href="/#about">About</a>
+        </nav>
+        <div class="nav-actions" id="navbarAuthSlot">
+            <a href="/register.html" class="nav-button">Get Started</a>
+        </div>
+    </header>
+
+    <main class="auth-wrapper">
+        <div class="auth-card">
+            <div class="auth-header">
+                <span class="tag">WELCOME BACK</span>
+                <h1>Sign in to BrainShelf</h1>
+                <p>Access your notes, submissions, and community library.</p>
+            </div>
+
+            <div id="loginAlert" class="form-alert" role="alert"></div>
+
+            <form id="loginForm" novalidate>
+                <div class="form-group">
+                    <label for="loginEmail">Email Address</label>
+                    <input
+                        type="email"
+                        id="loginEmail"
+                        name="email"
+                        placeholder="you@college.edu"
+                        required
+                        autocomplete="email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        name="password"
+                        placeholder="••••••••"
+                        required
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <button type="submit" id="loginSubmitBtn" class="btn-submit">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="auth-footer">
+                Don't have an account yet? <a href="/register.html">Create an account</a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <a class="logo" href="/">Brain<span>Shelf</span></a>
+        <p>Learn together. Grow together.</p>
+        <small>© 2026 BrainShelf · Student Notes Sharing Platform</small>
+    </footer>
+
+    <script src="/js/auth.js"></script>
+    <script>
+        const loginForm = document.getElementById("loginForm");
+        const loginAlert = document.getElementById("loginAlert");
+        const loginSubmitBtn = document.getElementById("loginSubmitBtn");
+
+        loginForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            loginAlert.className = "form-alert";
+            loginAlert.style.display = "none";
+
+            const email = document.getElementById("loginEmail").value.trim();
+            const password = document.getElementById("loginPassword").value;
+
+            if (!email || !password) {
+                showAlert("Please enter both your email address and password.", "error");
+                return;
+            }
+
+            loginSubmitBtn.disabled = true;
+            loginSubmitBtn.textContent = "Signing in...";
+
+            try {
+                const res = await fetch("/api/auth/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await res.json();
+
+                if (!res.ok) {
+                    throw new Error(data.error || "Invalid credentials.");
+                }
+
+                showAlert("Sign in successful! Redirecting...", "success");
+
+                setTimeout(() => {
+                    if (data.user && data.user.role === "admin") {
+                        window.location.href = "/admin.html";
+                    } else {
+                        window.location.href = "/";
+                    }
+                }, 800);
+            } catch (err) {
+                showAlert(err.message, "error");
+                loginSubmitBtn.disabled = false;
+                loginSubmitBtn.textContent = "Sign In";
+            }
+        });
+
+        function showAlert(msg, type) {
+            loginAlert.textContent = msg;
+            loginAlert.className = `form-alert ${type}`;
+            loginAlert.style.display = "block";
+        }
+    </script>
+</body>
+</html>
