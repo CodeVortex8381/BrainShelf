@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap');
 
 :root {
@@ -32,7 +31,8 @@ a {
     text-decoration: none;
 }
 
-button, input {
+button,
+input {
     font: inherit;
 }
 
@@ -121,7 +121,7 @@ button {
     color: var(--green);
 }
 
-.hero-content > p {
+.hero-content>p {
     color: var(--muted);
     max-width: 430px;
     margin: 22px 0 25px;
@@ -139,7 +139,7 @@ button {
     box-shadow: 0 8px 30px #263a2910;
 }
 
-.search-box > span {
+.search-box>span {
     padding-left: 10px;
     font-size: 24px;
     color: var(--muted);
@@ -219,7 +219,7 @@ button {
     transform: rotate(-7deg);
 }
 
-.book-front > span {
+.book-front>span {
     font-size: 36px;
     color: var(--lime);
 }
@@ -632,7 +632,9 @@ footer small {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .error-banner {
@@ -1041,4 +1043,3 @@ footer small {
         padding: 26px 20px;
     }
 }
-
