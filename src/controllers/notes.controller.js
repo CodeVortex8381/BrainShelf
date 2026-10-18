@@ -15,35 +15,15 @@ async function getNotes(req, res) {
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(50, Math.max(1, parseInt(limit, 10) || 9));
 
-    // If DB is not connected or in demo fallback mode
+    // If DB is not connected yet, return empty list gracefully
     if (!isDbConnected()) {
-      let filtered = DEFAULT_DEMO_NOTES.filter((n) => n.status === "approved");
-
-      if (category && category !== "All") {
-        filtered = filtered.filter((n) => n.category.toLowerCase() === category.toLowerCase());
-      }
-      if (semester && semester !== "All") {
-        filtered = filtered.filter((n) => n.semester.toLowerCase() === semester.toLowerCase());
-      }
-      if (searchQuery) {
-        filtered = filtered.filter((n) => {
-          const hay = `${n.title} ${n.subject} ${n.category} ${n.semester} ${n.description} ${n.tags.join(" ")}`.toLowerCase();
-          return hay.includes(searchQuery);
-        });
-      }
-
-      const total = filtered.length;
-      const start = (pageNum - 1) * limitNum;
-      const paginated = filtered.slice(start, start + limitNum);
-
       return res.status(200).json({
         success: true,
-        isDemo: true,
-        total,
+        total: 0,
         page: pageNum,
-        pages: Math.ceil(total / limitNum) || 1,
-        count: paginated.length,
-        notes: paginated,
+        pages: 1,
+        count: 0,
+        notes: [],
       });
     }
 
@@ -74,18 +54,7 @@ async function getNotes(req, res) {
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
 
-    // If DB has 0 approved notes yet, provide demo notes so the public site is immediately welcoming and usable
-    if (total === 0 && !searchQuery && (!category || category === "All") && (!semester || semester === "All")) {
-      return res.status(200).json({
-        success: true,
-        isDemo: true,
-        total: DEFAULT_DEMO_NOTES.length,
-        page: 1,
-        pages: 1,
-        count: DEFAULT_DEMO_NOTES.length,
-        notes: DEFAULT_DEMO_NOTES,
-      });
-    }
+
 
     return res.status(200).json({
       success: true,
@@ -107,11 +76,7 @@ async function getNoteById(req, res) {
   try {
     const { id } = req.params;
 
-    // Check demo note ID
-    const demo = DEFAULT_DEMO_NOTES.find((d) => d._id === id);
-    if (demo) {
-      return res.status(200).json({ success: true, note: demo });
-    }
+
 
     if (!isDbConnected()) {
       return res.status(404).json({ success: false, error: "Note not found." });
@@ -288,15 +253,7 @@ async function downloadNote(req, res) {
   try {
     const { id } = req.params;
 
-    // Check demo notes
-    const demo = DEFAULT_DEMO_NOTES.find((d) => d._id === id);
-    if (demo) {
-      return res.status(200).json({
-        success: true,
-        message: "This is a demonstration note card for the BrainShelf catalogue.",
-        note: demo,
-      });
-    }
+
 
     if (!isDbConnected()) {
       return res.status(404).json({ success: false, error: "Note not found." });
@@ -351,5 +308,4 @@ module.exports = {
   createNote,
   getMyNotes,
   downloadNote,
-  DEFAULT_DEMO_NOTES,
 };
