@@ -5,7 +5,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const cookieParser = require("cookie-parser");
 
-const { connectDB, isDbConnected } = require("./src/config/db");
+const { connectDB, isDbConnected, getDbError } = require("./src/config/db");
 const { isCloudinaryConfigured } = require("./src/config/cloudinary");
 const errorHandler = require("./src/middleware/errorHandler.middleware");
 
@@ -64,15 +64,28 @@ app.get("/upload", (req, res) => res.sendFile(path.join(__dirname, "public", "up
 app.get("/my-uploads", (req, res) => res.sendFile(path.join(__dirname, "public", "my-uploads.html")));
 app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
 
+// Ensure MongoDB is connected for API requests (serverless cold start helper)
+app.use("/api", async (req, res, next) => {
+  if (!isDbConnected()) {
+    await connectDB();
+  }
+  next();
+});
+
 // Safe Health Check Endpoint (FR-19, FR-21)
-app.get("/api/health", (req, res) => {
+app.get("/api/health", async (req, res) => {
+  if (!isDbConnected()) {
+    await connectDB();
+  }
+  const connected = isDbConnected();
   res.status(200).json({
     status: "ok",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
     database: {
-      connected: isDbConnected(),
+      connected,
       provider: "MongoDB Atlas",
+      ...(connected ? {} : { error: getDbError() || "Connection pending or failed" }),
     },
     storage: {
       configured: isCloudinaryConfigured(),
