@@ -56,6 +56,14 @@ app.use(express.static(path.join(__dirname, "public")));
 // Local uploads fallback (if used)
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
+// Direct page routes
+app.get("/", (req, res) => res.sendFile(path.join(__dirname, "public", "index.html")));
+app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
+app.get("/register", (req, res) => res.sendFile(path.join(__dirname, "public", "register.html")));
+app.get("/upload", (req, res) => res.sendFile(path.join(__dirname, "public", "upload.html")));
+app.get("/my-uploads", (req, res) => res.sendFile(path.join(__dirname, "public", "my-uploads.html")));
+app.get("/admin", (req, res) => res.sendFile(path.join(__dirname, "public", "admin.html")));
+
 // Safe Health Check Endpoint (FR-19, FR-21)
 app.get("/api/health", (req, res) => {
   res.status(200).json({
