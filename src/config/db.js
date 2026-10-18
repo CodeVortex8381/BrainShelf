@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 
 let isConnected = false;
+let connectionPromise = null;
 
 async function connectDB() {
   const uri = process.env.MONGODB_URI;
@@ -11,18 +12,32 @@ async function connectDB() {
     return false;
   }
 
-  try {
-    const conn = await mongoose.connect(uri, {
-      serverSelectionTimeoutMS: 5000,
-    });
-    isConnected = true;
-    console.log(`✅ [DB] Connected to MongoDB: ${conn.connection.host}`);
+  if (isDbConnected()) {
     return true;
-  } catch (error) {
-    isConnected = false;
-    console.error(`❌ [DB] Connection error: ${error.message}`);
-    return false;
   }
+
+  if (connectionPromise) {
+    return connectionPromise;
+  }
+
+  connectionPromise = (async () => {
+    try {
+      const conn = await mongoose.connect(uri, {
+        serverSelectionTimeoutMS: 5000,
+      });
+      isConnected = true;
+      console.log(`✅ [DB] Connected to MongoDB: ${conn.connection.host}`);
+      return true;
+    } catch (error) {
+      isConnected = false;
+      console.error(`❌ [DB] Connection error: ${error.message}`);
+      return false;
+    } finally {
+      connectionPromise = null;
+    }
+  })();
+
+  return connectionPromise;
 }
 
 mongoose.connection.on("connected", () => {

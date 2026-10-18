@@ -1,6 +1,10 @@
-const { isDbConnected } = require("../config/db");
+const { isDbConnected, connectDB } = require("../config/db");
 
-function checkDbConnection(req, res, next) {
+async function checkDbConnection(req, res, next) {
+  if (!isDbConnected()) {
+    await connectDB();
+  }
+
   if (!isDbConnected()) {
     return res.status(503).json({
       success: false,
