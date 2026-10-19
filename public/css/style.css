@@ -1010,6 +1010,62 @@ footer small {
     margin-top: 20px;
 }
 
+
+.password-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.password-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+    padding-right: 44px;
+}
+
+/* Disable native Edge/IE reveal button so it doesn't conflict or duplicate with custom eye */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+    display: none;
+}
+
+.toggle-password {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    border: none;
+    background: transparent;
+    color: var(--muted, #748079);
+    cursor: pointer;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    transition: color 0.15s ease, background-color 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.toggle-password:hover {
+    color: var(--green, #246b50);
+    background-color: rgba(36, 107, 80, 0.08);
+}
+
+.toggle-password:focus-visible {
+    outline: 2px solid var(--green, #246b50);
+    outline-offset: 2px;
+}
+
+.toggle-password svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    pointer-events: none;
+}
+
+
+
 /* Responsive extension adjustments */
 @media (max-width: 850px) {
     .stats-grid {
