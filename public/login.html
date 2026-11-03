@@ -28,6 +28,42 @@
                 <p>Access your notes, submissions, and community library.</p>
             </div>
 
+            <!-- Interactive Animated Login Mascot -->
+            <div class="mascot-wrapper" aria-hidden="true">
+                <div class="mascot" id="loginMascot">
+                    <div class="mascot-ear mascot-ear-left"></div>
+                    <div class="mascot-ear mascot-ear-right"></div>
+                    <div class="mascot-face">
+                        <div class="mascot-blush mascot-blush-left"></div>
+                        <div class="mascot-blush mascot-blush-right"></div>
+                        <div class="mascot-eyes">
+                            <div class="mascot-eye mascot-eye-left" id="mascotEyeLeft">
+                                <div class="mascot-pupil" id="mascotPupilLeft">
+                                    <span class="pupil-sparkle"></span>
+                                </div>
+                                <div class="mascot-eyelid"></div>
+                                <div class="mascot-closed-curve"></div>
+                            </div>
+                            <div class="mascot-eye mascot-eye-right" id="mascotEyeRight">
+                                <div class="mascot-pupil" id="mascotPupilRight">
+                                    <span class="pupil-sparkle"></span>
+                                </div>
+                                <div class="mascot-eyelid"></div>
+                                <div class="mascot-closed-curve"></div>
+                            </div>
+                        </div>
+                        <div class="mascot-snout">
+                            <div class="mascot-nose"></div>
+                            <div class="mascot-mouth"></div>
+                        </div>
+                        <div class="mascot-paws">
+                            <div class="mascot-paw mascot-paw-left"></div>
+                            <div class="mascot-paw mascot-paw-right"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="loginAlert" class="form-alert" role="alert"></div>
 
             <form id="loginForm" novalidate>
@@ -146,15 +182,149 @@
             }
         });
 
+        const togglePassword = document.getElementById("togglePassword");
+        const passwordInput = document.getElementById("loginPassword");
+        const mascot = document.getElementById("loginMascot");
+        const eyeLeft = document.getElementById("mascotEyeLeft");
+        const eyeRight = document.getElementById("mascotEyeRight");
+        const pupilLeft = document.getElementById("mascotPupilLeft");
+        const pupilRight = document.getElementById("mascotPupilRight");
+
+        let isPasswordFocused = false;
+        let mouseX = window.innerWidth / 2;
+        let mouseY = window.innerHeight / 2;
+        let rafPending = false;
+
+        // Mascot error shake animation
+        function triggerMascotErrorAnimation() {
+            if (!mascot) return;
+            mascot.classList.remove("error-shake");
+            void mascot.offsetWidth; // Trigger browser reflow to restart animation
+            mascot.classList.add("error-shake");
+
+            setTimeout(() => {
+                mascot.classList.remove("error-shake");
+                updateMascotExpression();
+            }, 750);
+        }
+
         function showAlert(msg, type) {
             loginAlert.textContent = msg;
             loginAlert.className = `form-alert ${type}`;
             loginAlert.style.display = "block";
+
+            if (type === "error") {
+                triggerMascotErrorAnimation();
+            }
         }
 
-        const togglePassword = document.getElementById("togglePassword");
-        const passwordInput = document.getElementById("loginPassword");
+        // Mascot expression manager
+        function updateMascotExpression() {
+            if (!mascot) return;
+            const isPassVisible = passwordInput && passwordInput.type === "text";
+            const isPassActive = isPasswordFocused || (document.activeElement === passwordInput);
+            const shouldClose = isPassVisible || isPassActive;
 
+            if (shouldClose) {
+                mascot.classList.add("eyes-closed");
+                if (pupilLeft) pupilLeft.style.transform = "translate3d(0, 0, 0)";
+                if (pupilRight) pupilRight.style.transform = "translate3d(0, 0, 0)";
+            } else {
+                mascot.classList.remove("eyes-closed");
+                updatePupils();
+            }
+        }
+
+        // Smooth pupil tracking with bounded travel radius
+        function movePupil(eye, pupil, targetX, targetY) {
+            if (!eye || !pupil) return;
+            const rect = eye.getBoundingClientRect();
+            const eyeCenterX = rect.left + rect.width / 2;
+            const eyeCenterY = rect.top + rect.height / 2;
+
+            const dx = targetX - eyeCenterX;
+            const dy = targetY - eyeCenterY;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.hypot(dx, dy);
+
+            // Pupil radius bounding: max travel is 5px so pupil stays well inside the 24px eye
+            const maxRadius = 5.2;
+            const radius = Math.min(maxRadius, dist / 22);
+
+            const pupilX = Math.cos(angle) * radius;
+            const pupilY = Math.sin(angle) * radius;
+
+            pupil.style.transform = `translate3d(${pupilX.toFixed(2)}px, ${pupilY.toFixed(2)}px, 0)`;
+        }
+
+        function updatePupils() {
+            rafPending = false;
+            if (!mascot || mascot.classList.contains("eyes-closed")) return;
+            movePupil(eyeLeft, pupilLeft, mouseX, mouseY);
+            movePupil(eyeRight, pupilRight, mouseX, mouseY);
+        }
+
+        function onPointerMove(e) {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            if (!rafPending && mascot && !mascot.classList.contains("eyes-closed")) {
+                rafPending = true;
+                requestAnimationFrame(updatePupils);
+            }
+        }
+
+        function onTouchMove(e) {
+            if (e.touches && e.touches[0]) {
+                mouseX = e.touches[0].clientX;
+                mouseY = e.touches[0].clientY;
+                if (!rafPending && mascot && !mascot.classList.contains("eyes-closed")) {
+                    rafPending = true;
+                    requestAnimationFrame(updatePupils);
+                }
+            }
+        }
+
+        window.addEventListener("pointermove", onPointerMove, { passive: true });
+        window.addEventListener("touchmove", onTouchMove, { passive: true });
+
+        // Password focus and blur listeners
+        if (passwordInput) {
+            passwordInput.addEventListener("focus", () => {
+                isPasswordFocused = true;
+                updateMascotExpression();
+            });
+
+            passwordInput.addEventListener("blur", () => {
+                isPasswordFocused = false;
+                updateMascotExpression();
+            });
+        }
+
+        // Hide password function
+        function hidePassword() {
+            if (!passwordInput || passwordInput.type !== "text") return;
+            passwordInput.type = "password";
+            if (togglePassword) {
+                const eyeShow = togglePassword.querySelector(".eye-show");
+                const eyeHide = togglePassword.querySelector(".eye-hide");
+                if (eyeShow && eyeHide) {
+                    eyeShow.style.display = "block";
+                    eyeHide.style.display = "none";
+                }
+                togglePassword.setAttribute("aria-label", "Show password");
+                togglePassword.setAttribute("title", "Show password");
+                togglePassword.setAttribute("aria-pressed", "false");
+            }
+            updateMascotExpression();
+        }
+
+        const emailInput = document.getElementById("loginEmail");
+        if (emailInput) {
+            emailInput.addEventListener("focus", hidePassword);
+            emailInput.addEventListener("click", hidePassword);
+        }
+
+        // Toggle password show/hide button
         if (togglePassword && passwordInput) {
             const eyeShow = togglePassword.querySelector(".eye-show");
             const eyeHide = togglePassword.querySelector(".eye-hide");
@@ -174,13 +344,13 @@
                 togglePassword.setAttribute("title", label);
                 togglePassword.setAttribute("aria-pressed", String(isHidden));
 
-                passwordInput.focus();
-                const len = passwordInput.value.length;
-                if (passwordInput.setSelectionRange) {
-                    passwordInput.setSelectionRange(len, len);
-                }
+                // Maintain appropriate mascot expression
+                updateMascotExpression();
             });
         }
+
+        // Initialize pupil tracking
+        updatePupils();
     </script>
 </body>
 </html>

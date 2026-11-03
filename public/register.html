@@ -203,6 +203,31 @@
         const toggleRegPassword = document.getElementById("toggleRegPassword");
         const regPasswordInput = document.getElementById("regPassword");
 
+        function hideRegPassword() {
+            if (!regPasswordInput || regPasswordInput.type !== "text") return;
+            regPasswordInput.type = "password";
+            if (toggleRegPassword) {
+                const eyeShow = toggleRegPassword.querySelector(".eye-show");
+                const eyeHide = toggleRegPassword.querySelector(".eye-hide");
+                if (eyeShow && eyeHide) {
+                    eyeShow.style.display = "block";
+                    eyeHide.style.display = "none";
+                }
+                toggleRegPassword.setAttribute("aria-label", "Show password");
+                toggleRegPassword.setAttribute("title", "Show password");
+                toggleRegPassword.setAttribute("aria-pressed", "false");
+            }
+        }
+
+        // Auto-hide password when user focuses or clicks other fields
+        ["regName", "regEmail", "regSemester", "regCollege"].forEach((id) => {
+            const input = document.getElementById(id);
+            if (input) {
+                input.addEventListener("focus", hideRegPassword);
+                input.addEventListener("click", hideRegPassword);
+            }
+        });
+
         if (toggleRegPassword && regPasswordInput) {
             const eyeShow = toggleRegPassword.querySelector(".eye-show");
             const eyeHide = toggleRegPassword.querySelector(".eye-hide");
