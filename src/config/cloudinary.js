@@ -67,7 +67,7 @@ async function uploadPdf(fileBuffer, originalName) {
     try {
       const uploadPromise = new Promise((resolve, reject) => {
         const sanitizedBase = path.parse(originalName).name.replace(/[^a-zA-Z0-9_-]/g, "_");
-        const publicId = `brainshelf_notes/${Date.now()}_${sanitizedBase}`;
+        const publicId = `${Date.now()}_${sanitizedBase}`;
 
         const uploadStream = cloudinary.uploader.upload_stream(
           {
@@ -75,6 +75,7 @@ async function uploadPdf(fileBuffer, originalName) {
             public_id: publicId,
             format: "pdf",
             folder: "brainshelf_notes",
+            access_mode: "public",
           },
           (error, result) => {
             if (error) {
